@@ -6,9 +6,61 @@ document.addEventListener("DOMContentLoaded", () => {
     let entryCount = 0;
     const maxEntries = 50;
 
-    function createEntry() {
-        if (entryCount >= maxEntries) return;
+    function setupImageUploader() {
+        const uploader = document.createElement("div");
+        uploader.classList.add("image-uploader");
+        uploader.innerHTML = `
+            <div class="drag-drop-area">
+                <p>Drag and drop images here or</p>
+                <button type="button" id="select-images">Select Images</button>
+                <input type="file" id="image-input" multiple accept="image/*" style="display: none;" />
+            </div>
+        `;
 
+        entriesContainer.before(uploader);
+
+        const imageInput = uploader.querySelector("#image-input");
+        const selectImagesButton = uploader.querySelector("#select-images");
+
+        selectImagesButton.addEventListener("click", () => {
+            imageInput.click();
+        });
+
+        uploader.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            uploader.classList.add("dragging");
+        });
+
+        uploader.addEventListener("dragleave", () => {
+            uploader.classList.remove("dragging");
+        });
+
+        uploader.addEventListener("drop", (e) => {
+            e.preventDefault();
+            uploader.classList.remove("dragging");
+            handleFiles(e.dataTransfer.files);
+        });
+
+        imageInput.addEventListener("change", () => {
+            handleFiles(imageInput.files);
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach((file) => {
+                const fileName = `bingo-image-${Date.now()}-${file.name}`;
+                caches.open("bingo-images").then((cache) => {
+                    cache.put(fileName, new Response(file));
+                    createEntry(fileName, URL.createObjectURL(file));
+                });
+            });
+
+            // Enable buttons after images are selected
+            addEntryButton.disabled = false;
+            nextButton.disabled = false;
+        }
+    }
+
+    function createEntry(imageCacheKey, imageUrl) {
         const entryDiv = document.createElement("div");
         entryDiv.classList.add("entry");
 
@@ -17,9 +69,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span class="entry-number">${entryCount + 1}</span>
                 <button type="button" class="close-entry">&times;</button>
             </div>
+            <img src="${imageUrl}" alt="Uploaded Image" class="preview-image" />
             <input type="text" placeholder="Title" class="title" />
             <input type="text" placeholder="Author" class="author" />
-            <input type="file" accept="image/*" class="image" />
         `;
 
         const closeButton = entryDiv.querySelector(".close-entry");
@@ -45,18 +97,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const entries = document.querySelectorAll(".entry");
         const data = [];
 
-        for (const entry of entries) {
+        entries.forEach((entry) => {
             const title = entry.querySelector(".title").value.trim();
             const author = entry.querySelector(".author").value.trim();
-            const image = entry.querySelector(".image").value.trim();
+            const image = entry.querySelector(".preview-image").src;
 
-            if (!title && !image) {
-                alert("Each entry must have at least a title or an image.");
-                return null;
-            }
+            const cacheKey = image.split("blob:")[1]; // Extract cache key from blob URL
 
-            data.push({ title, author, image });
-        }
+            data.push({ title, author, image: cacheKey });
+        });
 
         return data;
     }
@@ -75,6 +124,22 @@ document.addEventListener("DOMContentLoaded", () => {
             entries.forEach((entry, index) => {
                 const entryDiv = document.createElement("div");
                 entryDiv.classList.add("entry");
+
+                let imageUrl = "";
+                if (entry.image) {
+                    caches.open("bingo-images").then((cache) => {
+                        cache.match(entry.image).then((response) => {
+                            if (response) {
+                                imageUrl = URL.createObjectURL(response.body);
+                                const imgElement = document.createElement("img");
+                                imgElement.src = imageUrl;
+                                imgElement.alt = "Uploaded Image";
+                                imgElement.classList.add("preview-image");
+                                entryDiv.appendChild(imgElement);
+                            }
+                        });
+                    });
+                }
 
                 entryDiv.innerHTML = `
                     <div class="entry-header">
@@ -103,18 +168,20 @@ document.addEventListener("DOMContentLoaded", () => {
         createEntry();
     });
 
-    nextButton.addEventListener("click", () => {
-        const data = validateEntries();
+    nextButton.addEventListener("click", async () => {
+        const data = await validateEntries();
         if (data) {
             saveToLocalStorage(data);
         }
     });
 
-    // Initialize with 3 entries
-    for (let i = 0; i < 3; i++) {
-        createEntry();
-    }
-
     // Call populateEntriesFromLocalStorage on page load
     populateEntriesFromLocalStorage();
+
+    // Initialize the image uploader
+    setupImageUploader();
+
+    // Disable buttons initially
+    addEntryButton.disabled = true;
+    nextButton.disabled = true;
 });

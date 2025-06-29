@@ -68,3 +68,37 @@ button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }
+
+.image-uploader {
+    margin: 20px 0;
+    padding: 40px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    text-align: center;
+    background-color: #f9f9f9;
+    transition: background-color 0.3s ease;
+}
+
+.image-uploader.dragging {
+    background-color: #e0f7fa;
+}
+
+.image-uploader p {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.image-uploader button {
+    padding: 10px 20px;
+    font-size: 16px;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.image-uploader button:hover {
+    background-color: #0056b3;
+}
