@@ -164,6 +164,34 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function setupResetButton() {
+        const resetButton = document.createElement("button");
+        resetButton.textContent = "Reset";
+        resetButton.classList.add("reset-button");
+        document.body.prepend(resetButton);
+
+        resetButton.addEventListener("click", () => {
+            if (confirm("Are you sure you want to reset? This will clear all data.")) {
+                // Clear local storage
+                localStorage.clear();
+
+                // Clear cache
+                caches.open("bingo-images").then((cache) => {
+                    cache.keys().then((keys) => {
+                        keys.forEach((key) => cache.delete(key));
+                    });
+                });
+
+                // Reset the page
+                entriesContainer.innerHTML = "";
+                entryCount = 0;
+                addEntryButton.disabled = true;
+                nextButton.disabled = true;
+                alert("Page has been reset.");
+            }
+        });
+    }
+
     addEntryButton.addEventListener("click", () => {
         createEntry();
     });
@@ -180,6 +208,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initialize the image uploader
     setupImageUploader();
+
+    // Setup the reset button
+    setupResetButton();
 
     // Disable buttons initially
     addEntryButton.disabled = true;
